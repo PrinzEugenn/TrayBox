@@ -1,4 +1,5 @@
 using System;
+using static TrayText;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -78,9 +79,11 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
     private readonly IntPtr hwnd;
     [System.Diagnostics.Conditional("TRAYBOX_TEST")]
     private static void Trace(string line) { }
-    internal MainWindow(TrayEngine value, Action quitAction, string settingsPath)
+    internal MainWindow(TrayEngine value, Action quitAction, string settingsPath, AppearanceSettings settings = null)
     {
-        InitializeComponent(); engine = value; appearancePath = settingsPath; appearance = AppearanceSettings.LoadFrom(settingsPath);
+        InitializeComponent(); engine = value; appearancePath = settingsPath; appearance = settings ?? AppearanceSettings.LoadFrom(settingsPath);
+        TrayText.Use(appearance.Language);
+        ApplyLanguageText();
         sizesPath = Path.Combine(Path.GetDirectoryName(settingsPath), "window-sizes.ini"); sizes = WindowSizes.Load(sizesPath);
         layout = BoxLayout.Load(Path.Combine(Path.GetDirectoryName(settingsPath), "box-layout.ini"));
         hwnd = WindowNative.GetWindowHandle(this);
@@ -157,7 +160,7 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
         StartBoundsInspection();
         dragPreview.RunOnWindowThread(() => {
             if(hook==IntPtr.Zero) hook=SetWindowsHookEx(14,mouseProc,IntPtr.Zero,0);
-            if(hook==IntPtr.Zero) DispatcherQueue.TryEnqueue(() => Status.Text="无法启用拖动监听，请使用设置中的图标收纳。");
+            if(hook==IntPtr.Zero) DispatcherQueue.TryEnqueue(() => Status.Text=TextFor(TextKey.DragUnavailable));
         });
     }
     private void Hide()
@@ -326,7 +329,7 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
             if (inside && moved)
             {
                 var item = ResolveSource();
-                if (item == null) Status.Text = "未能确认拖动的图标，可在「设置 › 图标收纳」查看识别结果";
+                if (item == null) Status.Text = TextFor(TextKey.DragUnknown);
                 else {
                     if(ChangeIcon(item,true,group?.Id,before)) Activate();
                 }
@@ -337,12 +340,12 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
     private void Render()
     {
         SwitchView(PanelView.Box);
-        BackButton.Visibility=Visibility.Collapsed; PageTitle.Text="TrayBox"; PageSubtitle.Text="图标收纳";
+        BackButton.Visibility=Visibility.Collapsed; PageTitle.Text="TrayBox"; PageSubtitle.Text=TextFor(TextKey.TrayIcons);
         Tiles.Visibility=Visibility.Visible; ListItems.Visibility=Visibility.Collapsed;
         SectionHeader.Visibility=Visibility.Visible; ManageButton.Visibility=Visibility.Visible;
         OrganizeButton.Visibility=Visibility.Visible;
-        OrganizeButton.Content=organizing ? "完成" : "整理";
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(OrganizeButton,organizing ? "完成整理" : "整理图标");
+        OrganizeButton.Content=organizing ? TextFor(TextKey.Done) : TextFor(TextKey.Organize);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(OrganizeButton,organizing ? TextFor(TextKey.DoneOrganizing) : TextFor(TextKey.OrganizeIcons));
         NewGroupButton.Visibility=organizing ? Visibility.Visible : Visibility.Collapsed;
         RenderBoxContents(); RefreshBounds();
     }
@@ -358,7 +361,7 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
         if(organizing) {
             lastClickKey=null;
             if(!right && moved) CompleteOrganizeMove(item,group,before);
-            else if(!right) Status.Text="拖动可排序；右键可移到分组";
+            else if(!right) Status.Text=TextFor(TextKey.TileHint);
             return;
         }
         if (!right && moved)
@@ -391,28 +394,29 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
     {
         navigating=true; managing=false; inspectionGeneration++;
         SwitchView(PanelView.Manage);
-        BackButton.Visibility=Visibility.Visible; PageTitle.Text="设置"; PageSubtitle.Text="TrayBox";
+        BackButton.Visibility=Visibility.Visible; PageTitle.Text=TextFor(TextKey.Settings); PageSubtitle.Text="TrayBox";
         Tiles.Visibility=Visibility.Collapsed; EmptyState.Visibility=Visibility.Collapsed; SectionHeader.Visibility=Visibility.Collapsed;
         ListItems.Visibility=Visibility.Visible; ManageButton.Visibility=Visibility.Collapsed; ListItems.Children.Clear();
-        AddSettingsLink("外观与启动","主题、系统材质、自动启动","\uE790",RenderAppearance);
-        AddSettingsLink("图标收纳","选择收纳图标，查看识别状态","\uE8B7",OpenIconSettings);
+        AddSettingsLink(TextFor(TextKey.AppearanceAndStartup),TextFor(TextKey.AppearanceLinkHint),"\uE790",RenderAppearance);
+        AddSettingsLink(TextFor(TextKey.TrayIcons),TextFor(TextKey.TrayIconsLinkHint),"\uE8B7",OpenIconSettings);
+        AddLanguageSetting();
         Status.Text="";
     }
     internal void OpenIconSettings()
     {
         navigating=true; managing=true; visibleTrayIcons=null; inspectionGeneration++;
         SwitchView(PanelView.Icons);
-        BackButton.Visibility=Visibility.Visible; PageTitle.Text="图标收纳"; PageSubtitle.Text="选择要放进 TrayBox 的通知图标";
+        BackButton.Visibility=Visibility.Visible; PageTitle.Text=TextFor(TextKey.TrayIcons); PageSubtitle.Text=TextFor(TextKey.TrayIconsHint);
         Tiles.Visibility=Visibility.Collapsed; EmptyState.Visibility=Visibility.Collapsed; SectionHeader.Visibility=Visibility.Collapsed;
         ListItems.Visibility=Visibility.Visible; ManageButton.Visibility=Visibility.Collapsed; ListItems.Children.Clear();
         var tools=new Grid { ColumnSpacing=8, Margin=new Thickness(0,0,0,8) };
         tools.ColumnDefinitions.Add(new ColumnDefinition());
         tools.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });
-        iconSearch=new TextBox { PlaceholderText="搜索图标名称", VerticalAlignment=VerticalAlignment.Center };
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(iconSearch,"搜索图标名称");
+        iconSearch=new TextBox { PlaceholderText=TextFor(TextKey.SearchIcons), VerticalAlignment=VerticalAlignment.Center };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(iconSearch,TextFor(TextKey.SearchIcons));
         tools.Children.Add(iconSearch);
-        var refresh=new Button { Content="刷新图标", VerticalAlignment=VerticalAlignment.Center };
-        refresh.Click += delegate { visibleTrayIcons=null; inspectionGeneration++; diagnosticRevision++; targetedAttempts.Clear(); targetedNameRetry.Clear(); discoveryNotes.Clear(); engine.Refresh(); RenderIconSettings(); Status.Text="正在刷新图标名单…"; };
+        var refresh=new Button { Content=TextFor(TextKey.Refresh), VerticalAlignment=VerticalAlignment.Center };
+        refresh.Click += delegate { visibleTrayIcons=null; inspectionGeneration++; diagnosticRevision++; targetedAttempts.Clear(); targetedNameRetry.Clear(); discoveryNotes.Clear(); engine.Refresh(); RenderIconSettings(); Status.Text=TextFor(TextKey.Refreshing); };
         Grid.SetColumn(refresh,1);
         tools.Children.Add(refresh);
         ListItems.Children.Add(tools);
@@ -436,35 +440,35 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
         foreach (var item in captured)
         {
             if (TrayEngine.IsOwnIcon(item)) continue;
-            string label=String.IsNullOrWhiteSpace(item.Tip) ? "应用图标" : item.Tip.Replace('\n',' ');
+            string label=String.IsNullOrWhiteSpace(item.Tip) ? TextFor(TextKey.AppIcon) : item.Tip.Replace('\n',' ');
             if(!label.Contains(query,StringComparison.OrdinalIgnoreCase)) continue;
             var issue=item.Boxed ? null : TrayEngine.BoxingIssue(item);
             if(issue!=null)
-                unavailable.Children.Add(DiagnosisRow(label,issue,"TrayBox 已取得此图标的部分注册信息。"));
+                unavailable.Children.Add(DiagnosisRow(label,issue,TextFor(TextKey.PartialRegistration)));
             else
                 (item.Boxed ? selected : available).Children.Add(AvailableIconRow(item,label));
         }
-        AddIconSection("已收纳",selected);
-        AddIconSection("可收纳",available);
+        AddIconSection(TextFor(TextKey.Collected),selected);
+        AddIconSection(TextFor(TextKey.Available),available);
         if (visibleTrayIcons == null)
         {
-            iconResults.Children.Add(new TextBlock { Text="正在检查 Windows 通知区域…", TextWrapping=TextWrapping.Wrap, Margin=new Thickness(3,10,3,0) });
+            iconResults.Children.Add(new TextBlock { Text=TextFor(TextKey.Inspecting), TextWrapping=TextWrapping.Wrap, Margin=new Thickness(3,10,3,0) });
             StartVisibleInspection();
         }
         else
         {
-            if (inspectionFailed) iconResults.Children.Add(new TextBlock { Text="无法检查 Windows 通知区域，可稍后刷新重试。", TextWrapping=TextWrapping.Wrap, Opacity=0.7, Margin=new Thickness(3,10,3,2) });
+            if (inspectionFailed) iconResults.Children.Add(new TextBlock { Text=TextFor(TextKey.InspectFailed), TextWrapping=TextWrapping.Wrap, Opacity=0.7, Margin=new Thickness(3,10,3,2) });
             foreach (var icon in visibleTrayIcons)
             {
                 if (!icon.Name.Contains(query,StringComparison.OrdinalIgnoreCase) || VisibleTrayInspector.IsKnown(icon,captured,sourceBounds)) continue;
-                if(!discoveryNotes.TryGetValue(icon.Name,out var note)) note="尚未捕获此图标的应用注册信息";
-                unavailable.Children.Add(DiagnosisRow(icon.Name.Replace('\n',' '),note,"Windows 通知区域可见该图标。收纳需要取得所属应用的身份和点击回调。"));
+                if(!discoveryNotes.TryGetValue(icon.Name,out var note)) note=TextFor(TextKey.RegistrationMissing);
+                unavailable.Children.Add(DiagnosisRow(icon.Name.Replace('\n',' '),note,TextFor(TextKey.RegistrationNeeded)));
             }
             if(selected.Children.Count+available.Children.Count+unavailable.Children.Count==0 && query.Length>0)
-                iconResults.Children.Add(new TextBlock { Text="没有匹配的图标", Opacity=0.7, Margin=new Thickness(3,8,3,0) });
+                iconResults.Children.Add(new TextBlock { Text=TextFor(TextKey.NoMatchingIcons), Opacity=0.7, Margin=new Thickness(3,8,3,0) });
         }
-        AddIconSection("暂不可收纳",unavailable);
-        UpdateUndo(engine.SelectionPersistencePending ? "收纳记录暂未保存，TrayBox 会继续重试" : "");
+        AddIconSection(TextFor(TextKey.Unavailable),unavailable);
+        UpdateUndo(engine.SelectionPersistencePending ? TextFor(TextKey.PendingSave) : "");
     }
     private void StartVisibleInspection()
     {
@@ -513,7 +517,7 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
                 }
                 if(current==null)
                 {
-                    foreach(var name in names) discoveryNotes[name]="复查时无法读取通知区域，图标归属尚未核实";
+                    foreach(var name in names) discoveryNotes[name]=TextFor(TextKey.UnableToRecheck);
                     if(forManagement) RenderIconSettings();
                     return;
                 }
@@ -541,7 +545,7 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
                     bool sent=engine.RefreshProcesses(ids);
                     foreach(var target in targets)
                         if(engine.DiscoveryNotified.Contains(target.Id)) targetedAttempts.Add(target.Key);
-                    const string waiting="已请求应用重新注册，正在等待图标信息";
+                    string waiting=TextFor(TextKey.WaitingForRegistration);
                     var pending=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
                     foreach(var name in names)
                     {
@@ -550,9 +554,9 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
                         bool accepted=candidates.Exists(target=>engine.DiscoveryNotified.Contains(target.Id));
                         bool denied=candidates.Exists(target=>engine.DiscoveryDenied.Contains(target.Id));
                         identityNotes.TryGetValue(name,out var identityNote);
-                        string context=identityNote!=null ? identityNote+"。": "";
-                        if(denied && accepted) context+="有应用窗口拒绝重新注册请求。";
-                        discoveryNotes[name]=context+(accepted ? waiting : denied ? "Windows 拒绝向该应用发送重新注册请求" : "已匹配运行中的应用，重新注册请求未能送达");
+                        string context=identityNote!=null ? identityNote+"\n": "";
+                        if(denied && accepted) context+=TextFor(TextKey.RegistrationPartlyDenied)+"\n";
+                        discoveryNotes[name]=context+(accepted ? waiting : denied ? TextFor(TextKey.RegistrationDenied) : TextFor(TextKey.RegistrationNotDelivered));
                         if(accepted) pending[name]=context;
                     }
                     if (forManagement && managing) RenderIconSettings();
@@ -565,7 +569,7 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
                             if(disposed || attemptRevision!=diagnosticRevision) return;
                             foreach(var pair in pending)
                                 if(discoveryNotes.TryGetValue(pair.Key,out var note) && note==pair.Value+waiting)
-                                    discoveryNotes[pair.Key]=pair.Value+"已送达重新注册请求，仍未取得完整图标注册";
+                                    discoveryNotes[pair.Key]=pair.Value+TextFor(TextKey.RegistrationStillIncomplete);
                             if(showing && managing) RenderIconSettings();
                         };
                         timer.Start();
@@ -602,8 +606,8 @@ public sealed partial class MainWindow : Microsoft.UI.Xaml.Window, IDisposable
     private void SaveAppearance()
     {
         ApplyAppearance();
-        try { appearance.SaveTo(appearancePath); Status.Text="外观设置已保存"; }
-        catch { Status.Text="无法保存外观设置"; }
+        try { appearance.SaveTo(appearancePath); Status.Text=TextFor(TextKey.SettingsSaved); }
+        catch { Status.Text=TextFor(TextKey.SettingsSaveFailed); }
     }
     private void BackClicked(object sender, RoutedEventArgs args) { NavigateBack(); }
     private void NavigateBack()

@@ -10,6 +10,7 @@ internal sealed class AppearanceSettings
     internal const int DefaultBoxIconSize = 12;
     internal static readonly int[] BoxIconSizes = { 12, 16, 20, 24 };
     internal string Theme = "system";
+    internal string Language = "system";
     internal bool Acrylic = true;
     internal int Opacity = 97;
     internal int BoxIconSize = DefaultBoxIconSize;
@@ -27,6 +28,7 @@ internal sealed class AppearanceSettings
                 var p = line.Split(new char[] {'='}, 2);
                 if (p.Length != 2) continue;
                 if (p[0] == "theme" && (p[1] == "system" || p[1] == "dark" || p[1] == "light")) result.Theme = p[1];
+                if (p[0] == "language" && (p[1] == "system" || p[1] == "zh-Hans" || p[1] == "en")) result.Language = p[1];
                 if (p[0] == "acrylic") result.Acrylic = p[1] == "1";
                 int opacity;
                 if (p[0] == "opacity" && Int32.TryParse(p[1], out opacity)) result.Opacity = Math.Max(80, Math.Min(100, opacity));
@@ -47,7 +49,7 @@ internal sealed class AppearanceSettings
         string temp = fileName + ".new";
         File.WriteAllLines(temp, new string[] {
             "theme=" + Theme, "acrylic=" + (Acrylic ? "1" : "0"), "opacity=" + Opacity,
-            "box_icon_size=" + BoxIconSize, "show_box_icon_names=" + (ShowBoxIconNames ? "1" : "0")
+            "box_icon_size=" + BoxIconSize, "show_box_icon_names=" + (ShowBoxIconNames ? "1" : "0"), "language=" + Language
         });
         if (File.Exists(fileName)) File.Replace(temp, fileName, null); else File.Move(temp, fileName);
     }

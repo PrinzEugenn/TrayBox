@@ -39,7 +39,7 @@ internal static class TargetedTrayDiscovery
             {
                 if(root==null)
                 {
-                    if(notes!=null) foreach(string name in requestedNames) notes[name]="Windows 未提供可用于核对图标归属的记录";
+                    if(notes!=null) foreach(string name in requestedNames) notes[name]=TrayText.TextFor(TextKey.NoOwnerRecords);
                     return targets;
                 }
                 var entries=new List<KeyValuePair<string,string>>();
@@ -71,14 +71,14 @@ internal static class TargetedTrayDiscovery
                 }
                 if(notes!=null) foreach(string name in requestedNames) {
                     bool restricted=entries.Exists(entry=>NamesMatch(name,entry.Key) && denied.Contains(entry.Value));
-                    if(restricted) notes[name]="相关进程的身份查询受 Windows 权限限制";
+                    if(restricted) notes[name]=TrayText.TextFor(TextKey.OwnerQueryRestricted);
                 }
                 entries.RemoveAll(entry=>live[entry.Value].Count==0);
                 var uniquePaths=new Dictionary<string,List<string>>(StringComparer.OrdinalIgnoreCase);
                 foreach(string raw in requestedNames)
                 {
                     string path=MatchUniquePath(raw,entries);
-                    if(path==null) {if(notes!=null && !notes.ContainsKey(raw)) notes[raw]=entries.Exists(e=>NamesMatch(raw,e.Key)) ? "多个运行中的应用使用相同图标名称" : "未匹配到可验证身份的运行中应用";continue;}
+                    if(path==null) {if(notes!=null && !notes.ContainsKey(raw)) notes[raw]=entries.Exists(e=>NamesMatch(raw,e.Key)) ? TrayText.TextFor(TextKey.AmbiguousIconOwner) : TrayText.TextFor(TextKey.NoMatchingApp);continue;}
                     List<string> requested;
                     if(!uniquePaths.TryGetValue(path,out requested)) { requested=new List<string>(); uniquePaths[path]=requested; }
                     requested.Add(raw);
@@ -94,9 +94,9 @@ internal static class TargetedTrayDiscovery
                 }
             }
         }
-        catch (UnauthorizedAccessException) { SetNotes(requestedNames,notes,"Windows 拒绝读取图标归属记录"); }
-        catch (IOException) { SetNotes(requestedNames,notes,"读取 Windows 图标归属记录失败"); }
-        catch (System.Security.SecurityException) { SetNotes(requestedNames,notes,"Windows 拒绝读取图标归属记录"); }
+        catch (UnauthorizedAccessException) { SetNotes(requestedNames,notes,TrayText.TextFor(TextKey.OwnerRecordsDenied)); }
+        catch (IOException) { SetNotes(requestedNames,notes,TrayText.TextFor(TextKey.OwnerRecordsFailed)); }
+        catch (System.Security.SecurityException) { SetNotes(requestedNames,notes,TrayText.TextFor(TextKey.OwnerRecordsDenied)); }
         return targets;
     }
     private static void SetNotes(IEnumerable<string> names,IDictionary<string,string> notes,string reason)

@@ -1,4 +1,5 @@
 using System;
+using static TrayText;
 using System.Collections.Generic;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -45,7 +46,7 @@ public sealed partial class MainWindow
         CancelGroupDrag();
         pendingAtRender=engine.SelectionPersistencePending;
         var items=BoxItems(); string saveError=null;
-        try { layout.Remember(items.Keys); } catch(System.IO.IOException) { saveError="无法保存图标顺序，请检查磁盘空间"; } catch(UnauthorizedAccessException) { saveError="没有权限保存图标顺序"; }
+        try { layout.Remember(items.Keys); } catch(System.IO.IOException) { saveError=TextFor(TextKey.GroupOrderSaveFailed); } catch(UnauthorizedAccessException) { saveError=TextFor(TextKey.GroupOrderAccessDenied); }
         Tiles.Items.Clear(); tileTargets.Clear(); groupTargets.Clear(); organizeHighlight=null;
         int groupIndex=-1;
         foreach(var group in layout.Groups)
@@ -56,19 +57,19 @@ public sealed partial class MainWindow
             var section=new StackPanel { Spacing=8 };
             var header=new Grid { ColumnSpacing=8 };
             header.ColumnDefinitions.Add(new ColumnDefinition()); header.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });
-            var title=new TextBlock { Text=(group.Id==BoxLayout.DefaultGroup && !organizing ? "已收纳" : group.Name)+"  ·  "+ordered.Count, FontSize=12, FontWeight=Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment=VerticalAlignment.Center, TextTrimming=TextTrimming.CharacterEllipsis, Margin=new Thickness(4,0,0,0) };
+            var title=new TextBlock { Text=(group.Id==BoxLayout.DefaultGroup && !organizing ? TextFor(TextKey.Collected) : group.Name)+"  ·  "+ordered.Count, FontSize=12, FontWeight=Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment=VerticalAlignment.Center, TextTrimming=TextTrimming.CharacterEllipsis, Margin=new Thickness(4,0,0,0) };
             if(group.Id!=BoxLayout.DefaultGroup) header.Children.Add(CreateGroupDragHandle(group,title));
             else header.Children.Add(title);
             if(organizing && group.Id!=BoxLayout.DefaultGroup) {
                 var more=new Button { Content=new FontIcon { Glyph="\uE712",FontSize=16 },Padding=new Thickness(6),Style=(Style)Application.Current.Resources["SubtleButtonStyle"] };
-                AutomationProperties.SetName(more,"分组操作："+group.Name);
-                ToolTipService.SetToolTip(more,"排序与分组操作");
+                AutomationProperties.SetName(more,TextFor(TextKey.GroupActions,group.Name));
+                ToolTipService.SetToolTip(more,TextFor(TextKey.GroupMenuHint));
                 var menu=new MenuFlyout();
-                AddAction(menu,"上移分组",()=>ChangeGroupOrder(group.Id,group.Name,layout.GroupIndex(group.Id)-1),layout.CanMoveGroup(group.Id,-1),"\uE70E");
-                AddAction(menu,"下移分组",()=>ChangeGroupOrder(group.Id,group.Name,layout.GroupIndex(group.Id)+1),layout.CanMoveGroup(group.Id,1),"\uE70D");
+                AddAction(menu,TextFor(TextKey.MoveGroupUp),()=>ChangeGroupOrder(group.Id,group.Name,layout.GroupIndex(group.Id)-1),layout.CanMoveGroup(group.Id,-1),"\uE70E");
+                AddAction(menu,TextFor(TextKey.MoveGroupDown),()=>ChangeGroupOrder(group.Id,group.Name,layout.GroupIndex(group.Id)+1),layout.CanMoveGroup(group.Id,1),"\uE70D");
                 menu.Items.Add(new MenuFlyoutSeparator());
-                AddAction(menu,"重命名",()=>ShowGroupEditor(group));
-                AddAction(menu,"解散分组",()=>ChangeLayout(()=>layout.RemoveGroup(group.Id)));
+                AddAction(menu,TextFor(TextKey.Rename),()=>ShowGroupEditor(group));
+                AddAction(menu,TextFor(TextKey.DissolveGroup),()=>ChangeLayout(()=>layout.RemoveGroup(group.Id)));
                 more.Flyout=menu; Grid.SetColumn(more,1); header.Children.Add(more);
             }
             section.Children.Add(header);
@@ -76,7 +77,7 @@ public sealed partial class MainWindow
             grid.ItemsPanel=(ItemsPanelTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load("<ItemsPanelTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><ItemsWrapGrid Orientation='Horizontal'/></ItemsPanelTemplate>");
             foreach(var key in ordered) { var tile=CreateTile(items[key],group.Id); grid.Items.Add(tile); }
             section.Children.Add(grid);
-            if(ordered.Count==0) section.Children.Add(new TextBlock { Text="将图标拖到此处分组",FontSize=12,Opacity=0.65,Margin=new Thickness(4,0,4,4) });
+            if(ordered.Count==0) section.Children.Add(new TextBlock { Text=TextFor(TextKey.GroupDropHint),FontSize=12,Opacity=0.65,Margin=new Thickness(4,0,4,4) });
             var offset=new TranslateTransform();
             var card=new Border { Child=section, Padding=new Thickness(8), Style=(Style)Application.Current.Resources["TrayBoxCardStyle"], RenderTransform=offset };
             var slot=new Border { Child=card,Margin=new Thickness(0,0,0,GroupSpacing) };
@@ -84,16 +85,16 @@ public sealed partial class MainWindow
             Tiles.Items.Add(slot);
         }
         EmptyState.Visibility=Tiles.Items.Count==0 && !organizing ? Visibility.Visible : Visibility.Collapsed;
-        CountText.Text=items.Count+" 个图标";
-        UpdateUndo(engine.SelectionPersistencePending ? "收纳记录暂未保存，TrayBox 会继续重试" :
-            organizing ? "拖动图标或分组标题调整顺序" :
-            groupTargets.Exists(group=>group.Id!=BoxLayout.DefaultGroup) ? "拖动分组标题可排序" :
-            items.Count==0 ? "从通知区域拖入图标" : "拖出窗口可移出图标");
+        CountText.Text=items.Count==1 ? TextFor(TextKey.OneIcon) : TextFor(TextKey.IconCount,items.Count);
+        UpdateUndo(engine.SelectionPersistencePending ? TextFor(TextKey.PendingSave) :
+            organizing ? TextFor(TextKey.OrganizingHint) :
+            groupTargets.Exists(group=>group.Id!=BoxLayout.DefaultGroup) ? TextFor(TextKey.GroupDragHint) :
+            items.Count==0 ? TextFor(TextKey.DragIntoBox) : TextFor(TextKey.DragOutOfBox));
         if(saveError!=null) Status.Text=saveError;
     }
     private Button CreateTile(TrayItem item,string group)
     {
-        string label=(item.Tip ?? "应用").Replace('\n',' ').Replace('\r',' ');
+        string label=(item.Tip ?? TextFor(TextKey.Application)).Replace('\n',' ').Replace('\r',' ');
         int iconSize=appearance.BoxIconSize;
         int tileWidth=BoxTileSide+(appearance.ShowBoxIconNames ? 28 : 0);
         var stack=new StackPanel { Spacing=4, HorizontalAlignment=HorizontalAlignment.Center };
@@ -142,9 +143,9 @@ public sealed partial class MainWindow
     private MenuFlyout TileMenu(TileTarget tile)
     {
         var menu=new MenuFlyout(); var order=layout.Order(BoxItems().Keys,tile.Group); int index=order.IndexOf(tile.Key);
-        AddAction(menu,"前移",()=>ChangeIcon(tile.Item,true,tile.Group,order[index-1]),index>0);
-        AddAction(menu,"后移",()=>ChangeIcon(tile.Item,true,tile.Group,index+2<order.Count ? order[index+2] : null),index>=0 && index<order.Count-1);
-        var groups=new MenuFlyoutSubItem {Text="移到分组"};
+        AddAction(menu,TextFor(TextKey.MoveEarlier),()=>ChangeIcon(tile.Item,true,tile.Group,order[index-1]),index>0);
+        AddAction(menu,TextFor(TextKey.MoveLater),()=>ChangeIcon(tile.Item,true,tile.Group,index+2<order.Count ? order[index+2] : null),index>=0 && index<order.Count-1);
+        var groups=new MenuFlyoutSubItem {Text=TextFor(TextKey.MoveToGroup)};
         foreach(var group in layout.Groups) {
             var choice=new MenuFlyoutItem {Text=group.Name,IsEnabled=group.Id!=tile.Group};
             choice.Click+=delegate {ChangeIcon(tile.Item,true,group.Id);}; groups.Items.Add(choice);
@@ -155,22 +156,22 @@ public sealed partial class MainWindow
     private void NewGroupClicked(object sender,RoutedEventArgs args) { ShowGroupEditor(null); }
     private async void ShowGroupEditor(BoxGroup group)
     {
-        var name=new TextBox {Text=group==null ? "" : group.Name,PlaceholderText="例如：工作、系统工具",MaxLength=32,MinWidth=220};
-        AutomationProperties.SetName(name,"分组名称");
+        var name=new TextBox {Text=group==null ? "" : group.Name,PlaceholderText=TextFor(TextKey.GroupNameExample),MaxLength=32,MinWidth=220};
+        AutomationProperties.SetName(name,TextFor(TextKey.GroupName));
         var error=new TextBlock {TextWrapping=TextWrapping.Wrap,Foreground=(Brush)Application.Current.Resources["SystemFillColorCriticalBrush"],Visibility=Visibility.Collapsed};
         var content=new StackPanel {Spacing=8}; content.Children.Add(name); content.Children.Add(error);
-        var dialog=new ContentDialog {XamlRoot=Root.XamlRoot,RequestedTheme=Root.ActualTheme,Title=group==null ? "新建分组" : "重命名分组",Content=content,PrimaryButtonText="保存",CloseButtonText="取消",DefaultButton=ContentDialogButton.Primary};
+        var dialog=new ContentDialog {XamlRoot=Root.XamlRoot,RequestedTheme=Root.ActualTheme,Title=group==null ? TextFor(TextKey.NewGroup) : TextFor(TextKey.RenameGroup),Content=content,PrimaryButtonText=TextFor(TextKey.Save),CloseButtonText=TextFor(TextKey.Cancel),DefaultButton=ContentDialogButton.Primary};
         dialog.PrimaryButtonClick+=delegate(ContentDialog sender,ContentDialogButtonClickEventArgs e) {
             try {if(group==null) layout.AddGroup(name.Text); else layout.RenameGroup(group.Id,name.Text);}
-            catch(Exception ex) when(ex is ArgumentException || ex is System.IO.IOException || ex is UnauthorizedAccessException) {e.Cancel=true; error.Text=ex is ArgumentException ? ex.Message : "无法保存分组，请检查配置文件权限与磁盘空间"; error.Visibility=Visibility.Visible;}
+            catch(Exception ex) when(ex is ArgumentException || ex is System.IO.IOException || ex is UnauthorizedAccessException) {e.Cancel=true; error.Text=ex is ArgumentException ? ex.Message : TextFor(TextKey.GroupSaveFailed); error.Visibility=Visibility.Visible;}
         };
         await dialog.ShowAsync(); if(!disposed && view==PanelView.Box) Render();
     }
     private void ChangeLayout(Action action)
     {
-        try { action(); lastChange=null; undoCompleted=false; Render(); Status.Text="分组已解散"; }
-        catch(System.IO.IOException) {Status.Text="无法保存整理结果，请检查磁盘空间";}
-        catch(UnauthorizedAccessException) {Status.Text="没有权限保存整理结果";}
+        try { action(); lastChange=null; undoCompleted=false; Render(); Status.Text=TextFor(TextKey.GroupDissolved); }
+        catch(System.IO.IOException) {Status.Text=TextFor(TextKey.LayoutSaveFailed);}
+        catch(UnauthorizedAccessException) {Status.Text=TextFor(TextKey.LayoutAccessDenied);}
     }
     private bool ContainsPoint(FrameworkElement element,Point screen,out double relativeX)
     {
@@ -272,9 +273,9 @@ public sealed partial class MainWindow
         paintedGroup=group; paintedBefore=before;
         bool acceptsBlank=target && group==null && !itemPressed;
         DropHighlight.Visibility=acceptsBlank ? Visibility.Visible : Visibility.Collapsed;
-        string feedback=group!=null ? "放到「"+group.Name+"」" :
-            acceptsBlank ? "松开以收纳" :
-            itemPressed && !Inside(point) && !organizing ? "松开以移出" : "松开以取消";
+        string feedback=group!=null ? TextFor(TextKey.DropInGroup,group.Name) :
+            acceptsBlank ? TextFor(TextKey.ReleaseToCollect) :
+            itemPressed && !Inside(point) && !organizing ? TextFor(TextKey.ReleaseToRestore) : TextFor(TextKey.ReleaseToCancel);
         if(Status.Text!=feedback) Status.Text=feedback;
         if(sameSlot) return;
         if(organizeHighlight!=group?.Element)
@@ -321,7 +322,7 @@ public sealed partial class MainWindow
     }
     private void CompleteOrganizeMove(TrayItem item,GroupTarget group,string before)
     {
-        if(group==null) {Render(); Status.Text="已取消移动，图标仍在收纳盒内"; return;}
+        if(group==null) {Render(); Status.Text=TextFor(TextKey.MoveCancelled); return;}
         ChangeIcon(item,true,group.Id,before);
     }
 }

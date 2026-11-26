@@ -6,7 +6,13 @@ using System.Text;
 // Stable application/icon identities, independent of HWND, tooltip and process lifetime.
 internal sealed class BoxGroup
 {
-    internal string Id, Name;
+    internal string Id;
+    private string name;
+    internal string Name
+    {
+        get { return Id==BoxLayout.DefaultGroup ? TrayText.TextFor(TextKey.Ungrouped) : name; }
+        set { name=value; }
+    }
 }
 internal struct BoxPosition
 {
@@ -20,7 +26,7 @@ internal sealed class BoxLayout
     private readonly List<BoxGroup> groups = new List<BoxGroup>();
     private readonly List<Entry> entries = new List<Entry>();
     internal IEnumerable<BoxGroup> Groups { get { return groups.AsReadOnly(); } }
-    private BoxLayout(string file) { path=file; groups.Add(new BoxGroup { Id=DefaultGroup,Name="未分组" }); }
+    private BoxLayout(string file) { path=file; groups.Add(new BoxGroup { Id=DefaultGroup }); }
     internal static BoxLayout Load(string file)
     {
         var result=new BoxLayout(file);
@@ -103,14 +109,14 @@ internal sealed class BoxLayout
     }
     internal void RenameGroup(string id,string name)
     {
-        if(id==DefaultGroup || !HasGroup(id)) throw new ArgumentException("请选择自建分组");
+        if(id==DefaultGroup || !HasGroup(id)) throw new ArgumentException(TrayText.TextFor(TextKey.SelectCustomGroup));
         name=(name??"").Trim(); CheckName(name,id);
         Commit(copy=>copy.groups.Find(g=>g.Id==id).Name=name);
     }
     private void CheckName(string name,string current)
     {
-        if(!ValidName(name)) throw new ArgumentException("分组名称需为 1–32 个字符");
-        if(groups.Exists(g=>g.Id!=current && String.Equals(g.Name,name,StringComparison.OrdinalIgnoreCase))) throw new ArgumentException("已有同名分组");
+        if(!ValidName(name)) throw new ArgumentException(TrayText.TextFor(TextKey.GroupNameLength));
+        if(groups.Exists(g=>g.Id!=current && String.Equals(g.Name,name,StringComparison.OrdinalIgnoreCase))) throw new ArgumentException(TrayText.TextFor(TextKey.GroupNameTaken));
     }
     internal void RemoveGroup(string id)
     {
@@ -119,7 +125,7 @@ internal sealed class BoxLayout
     }
     internal void Move(string key,string group,string beforeKey=null)
     {
-        if(String.IsNullOrEmpty(key) || !HasGroup(group)) throw new ArgumentException("图标或分组不可用");
+        if(String.IsNullOrEmpty(key) || !HasGroup(group)) throw new ArgumentException(TrayText.TextFor(TextKey.GroupOrIconUnavailable));
         if(key==beforeKey) return;
         Commit(copy=> {
             copy.entries.RemoveAll(e=>e.Key==key);

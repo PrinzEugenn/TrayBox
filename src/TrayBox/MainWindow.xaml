@@ -18,11 +18,11 @@
         <Grid x:Name="PageHeading" ColumnSpacing="12">
             <Grid.RenderTransform><TranslateTransform x:Name="HeadingOffset"/></Grid.RenderTransform>
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <Button x:Name="BackButton" Visibility="Collapsed" VerticalAlignment="Center" Click="BackClicked" ToolTipService.ToolTip="返回" AutomationProperties.Name="返回"><SymbolIcon Symbol="Back"/></Button>
-            <StackPanel Grid.Column="1" Spacing="3"><TextBlock x:Name="PageTitle" Text="图标收纳" Style="{ThemeResource SubtitleTextBlockStyle}"/><TextBlock x:Name="PageSubtitle" Text="让通知区域更整洁" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/></StackPanel>
+            <Button x:Name="BackButton" Visibility="Collapsed" VerticalAlignment="Center" Click="BackClicked"><SymbolIcon Symbol="Back"/></Button>
+            <StackPanel Grid.Column="1" Spacing="3"><TextBlock x:Name="PageTitle" TextWrapping="Wrap" Style="{ThemeResource SubtitleTextBlockStyle}"/><TextBlock x:Name="PageSubtitle" TextWrapping="Wrap" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/></StackPanel>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <Button x:Name="OrganizeButton" Content="整理" Click="OrganizeClicked" AutomationProperties.Name="整理图标" ToolTipService.ToolTip="调整顺序与分组"/>
-                <Button x:Name="ManageButton" Click="ManageClicked" AutomationProperties.Name="设置" ToolTipService.ToolTip="设置" Width="36" Height="32" Padding="0"><FontIcon Glyph="&#xE713;" FontSize="16"/></Button>
+                <Button x:Name="OrganizeButton" Click="OrganizeClicked"/>
+                <Button x:Name="ManageButton" Click="ManageClicked" Width="36" Height="32" Padding="0"><FontIcon Glyph="&#xE713;" FontSize="16"/></Button>
             </StackPanel>
         </Grid>
         <Border x:Name="PageBody" Grid.Row="1">
@@ -32,15 +32,15 @@
                 <Grid x:Name="SectionHeader" ColumnSpacing="8">
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                     <TextBlock x:Name="CountText" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                    <Button x:Name="NewGroupButton" Grid.Column="1" Content="+ 新建分组" Click="NewGroupClicked" Visibility="Collapsed"/>
+                    <Button x:Name="NewGroupButton" Grid.Column="1" Click="NewGroupClicked" Visibility="Collapsed"/>
                 </Grid>
                 <ScrollViewer x:Name="ContentScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <Grid>
                         <ItemsControl x:Name="Tiles" HorizontalContentAlignment="Stretch"/>
                         <StackPanel x:Name="EmptyState" IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
                             <SymbolIcon Symbol="Folder" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                            <TextBlock Text="收纳盒还是空的" Style="{ThemeResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="拖入图标，或在设置中添加" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="EmptyTitle" Style="{ThemeResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="EmptyHint" TextWrapping="Wrap" TextAlignment="Center" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
                         </StackPanel>
                         <StackPanel x:Name="ListItems" Visibility="Collapsed" Spacing="4"/>
                     </Grid>
@@ -53,10 +53,10 @@
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
                        AutomationProperties.LiveSetting="Polite"/>
             <Button x:Name="UndoButton" Grid.Column="1" Visibility="Collapsed" Click="UndoClicked"
-                    AutomationProperties.Name="撤销" Style="{StaticResource SubtleButtonStyle}">
+                    Style="{StaticResource SubtleButtonStyle}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <FontIcon Glyph="&#xE7A7;" FontSize="14"/>
-                    <TextBlock Text="撤销"/>
+                    <TextBlock x:Name="UndoLabel"/>
                 </StackPanel>
             </Button>
         </Grid>

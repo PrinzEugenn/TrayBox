@@ -23,6 +23,9 @@ internal sealed class TrayHost : IDisposable
         if (!created) { app.Exit(); return; }
         string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrayBox");
         Directory.CreateDirectory(dir);
+        string appearancePath = Path.Combine(dir,"appearance.ini");
+        var appearance = AppearanceSettings.LoadFrom(appearancePath);
+        TrayText.Use(appearance.Language);
         string recovery = Path.Combine(dir, "recovery-" + Process.GetCurrentProcess().Id + ".txt");
         File.WriteAllText(recovery, "");
         var executable = Process.GetCurrentProcess().MainModule.FileName;
@@ -32,7 +35,7 @@ internal sealed class TrayHost : IDisposable
             : System.Drawing.Icon.ExtractAssociatedIcon(executable) ?? Resources.CreateIcon();
         tray = new NotifyIcon { Icon = trayIcon, Text = "TrayBox", Visible = true };
             engine = new TrayEngine(recovery, Path.Combine(dir, "selection.txt"));
-        panel = new MainWindow(engine, Dispose, Path.Combine(dir, "appearance.ini"));
+        panel = new MainWindow(engine, Dispose, appearancePath, appearance);
         tray.MouseClick += delegate(object sender, MouseEventArgs e) {
             if (e.Button == MouseButtons.Left) panel.ShowBox(Cursor.Position);
             else if (e.Button == MouseButtons.Right) ShowQuickMenu();

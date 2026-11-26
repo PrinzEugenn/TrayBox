@@ -83,7 +83,7 @@ public sealed partial class MainWindow
             Style=(Style)Application.Current.Resources["SubtleButtonStyle"],
             Padding=new Thickness(12,9,12,9), Flyout=details
         };
-        AutomationProperties.SetName(button,"查看 "+label+" 无法收纳的原因");
+        AutomationProperties.SetName(button,TrayText.TextFor(TextKey.ExplainIcon,label));
         var row=new Grid { ColumnSpacing=12 };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition());

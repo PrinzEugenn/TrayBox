@@ -1,4 +1,5 @@
 using System;
+using static TrayText;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -42,7 +43,7 @@ internal sealed class DragPreviewWindow : IDisposable
                 Wpf.Int32Rect.Empty,Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
             bitmap.Freeze();
         }
-        var name=String.IsNullOrWhiteSpace(item.Tip) ? "应用" : item.Tip.Replace('\n',' ').Replace('\r',' ').Trim();
+        var name=String.IsNullOrWhiteSpace(item.Tip) ? TextFor(TextKey.Application) : item.Tip.Replace('\n',' ').Replace('\r',' ').Trim();
         RunOnWindowThread(() =>
         {
             CreateSurface();

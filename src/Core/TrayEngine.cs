@@ -130,7 +130,7 @@ internal sealed class TrayEngine : IDisposable
         if (selectionPath != null && File.Exists(selectionPath))
             foreach (var line in File.ReadAllLines(selectionPath)) if (line.Length > 0) selections.Add(line);
         realTray = FindRealTray();
-        if (realTray == IntPtr.Zero) throw new InvalidOperationException("未找到 Windows 任务栏。");
+        if (realTray == IntPtr.Zero) throw new InvalidOperationException(TrayText.TextFor(TextKey.TaskbarNotFound));
         proc = HandleMessage;
         captureMouseProc = CaptureMouse;
         var wc = new WndClass { Proc = proc, Class = className, Instance = GetModuleHandleW(null) };
@@ -433,10 +433,10 @@ internal sealed class TrayEngine : IDisposable
         {
             item.Boxed = true;
             try { WriteRecovery(); }
-            catch { item.Boxed = wasBoxed; LastOperationError="无法写入图标恢复记录，请检查 TrayBox 配置目录"; return false; }
+            catch { item.Boxed = wasBoxed; LastOperationError=TrayText.TextFor(TextKey.RecoveryRecordFailed); return false; }
         }
         bool success = SetShellHidden(item,hide);
-        if(!success) LastOperationError="Windows 未接受该图标的显示状态变更";
+        if(!success) LastOperationError=TrayText.TextFor(TextKey.WindowsVisibilityFailed);
         if(success) clickVisibility.Remove(item);
         if (success) item.Boxed = hide;
         else item.Boxed = wasBoxed;
@@ -467,21 +467,21 @@ internal sealed class TrayEngine : IDisposable
     }
     internal static string BoxingIssue(TrayItem item)
     {
-        if(!IsWindow(item.Window)) return "图标的应用窗口已退出或失效";
-        if(item.Callback==0) return "已取得图标注册，但其中缺少点击回调";
+        if(!IsWindow(item.Window)) return TrayText.TextFor(TextKey.IconWindowGone);
+        if(item.Callback==0) return TrayText.TextFor(TextKey.CallbackMissing);
         if(item.SelectionIdentity!=null) return null;
         int error;
         if(Identity(item,out error)!=null) return null;
-        return error==5 ? "Windows 拒绝读取此图标所属进程的身份" : "无法验证图标所属应用的身份";
+        return error==5 ? TrayText.TextFor(TextKey.IdentityDenied) : TrayText.TextFor(TextKey.IdentityUnknown);
     }
     public bool SetBoxed(TrayItem item, bool boxed)
     {
         LastOperationError="";
-        if (IsOwnIcon(item)) { LastOperationError="TrayBox 自身的图标需要保留在通知区域"; return false; }
-        if (boxed && item.Callback==0) { LastOperationError="未取得点击回调，暂时无法收纳"; return false; }
-        if (boxed && !IsWindow(item.Window)) { LastOperationError="应用已退出或图标窗口已失效"; return false; }
+        if (IsOwnIcon(item)) { LastOperationError=TrayText.TextFor(TextKey.TrayBoxIcon); return false; }
+        if (boxed && item.Callback==0) { LastOperationError=TrayText.TextFor(TextKey.CantCollectMissingCallback); return false; }
+        if (boxed && !IsWindow(item.Window)) { LastOperationError=TrayText.TextFor(TextKey.CollectWindowGone); return false; }
         string identity = item.SelectionIdentity ?? Identity(item);
-        if (boxed && identity == null) { LastOperationError=BoxingIssue(item) ?? "应用身份已变化，请刷新图标后再试"; return false; }
+        if (boxed && identity == null) { LastOperationError=BoxingIssue(item) ?? TrayText.TextFor(TextKey.IdentityChanged); return false; }
         bool wasSelected = identity != null && selections.Contains(identity);
         string previousIdentity = item.SelectionIdentity;
         if (!Hide(item, boxed)) return false;
@@ -495,7 +495,7 @@ internal sealed class TrayEngine : IDisposable
                 if (!wasSelected) selections.Remove(identity);
                 item.SelectionIdentity = previousIdentity;
                 Hide(item, false);
-                LastOperationError="收纳记录无法保存，已尝试恢复图标";
+                LastOperationError=TrayText.TextFor(TextKey.SelectionSaveFailed);
                 return false;
             }
             // Restoring an icon must not be undone just because the selection
@@ -567,7 +567,7 @@ internal sealed class TrayEngine : IDisposable
     public bool Send(TrayItem item, uint message, Point point)
     {
         LastOperationError="";
-        if (item.Callback == 0 || !IsWindow(item.Window)) { LastOperationError="图标回调缺失或应用已退出"; return false; }
+        if (item.Callback == 0 || !IsWindow(item.Window)) { LastOperationError=TrayText.TextFor(TextKey.CallbackOrWindowGone); return false; }
         if(item.Boxed && item.Callback==6002 && message>=0x201 && message<=0x206) {
             var cls=new StringBuilder(80);
             GetClassNameW(item.Window,cls,cls.Capacity);
@@ -577,7 +577,7 @@ internal sealed class TrayEngine : IDisposable
         long wp = item.Version >= 4 ? (uint)((ushort)point.X | ((uint)(ushort)point.Y << 16)) : item.Id;
         long lp = item.Version >= 4 ? (uint)((ushort)message | ((uint)(ushort)item.Id << 16)) : message;
         bool sent=SendNotifyMessageW(item.Window, item.Callback, new IntPtr(wp), new IntPtr(lp));
-        if(!sent) LastOperationError=Marshal.GetLastWin32Error()==5 ? "Windows 拒绝点击转发：应用权限高于 TrayBox 或消息访问受限" : "点击转发失败：应用窗口可能已变化";
+        if(!sent) LastOperationError=Marshal.GetLastWin32Error()==5 ? TrayText.TextFor(TextKey.ClickDenied) : TrayText.TextFor(TextKey.ClickFailed);
         return sent;
     }
 
@@ -596,11 +596,11 @@ internal sealed class TrayEngine : IDisposable
     {
         Rectangle rect;
         if (!clickVisibility.ContainsKey(item) && !GetIconBounds(item,out rect)) {
-            if (!SetShellHidden(item,false)) { LastOperationError="Windows 未能提供应用需要的图标位置"; return false; }
+            if (!SetShellHidden(item,false)) { LastOperationError=TrayText.TextFor(TextKey.IconPositionMissing); return false; }
         } else if (!clickVisibility.ContainsKey(item)) return true;
         clickVisibility[item]=DateTime.UtcNow.AddMilliseconds(400);
         if (GetIconBounds(item,out rect)) return true;
-        LastOperationError="应用需要系统图标的位置，Windows 暂未返回。请重试或移出后打开。";
+        LastOperationError=TrayText.TextFor(TextKey.TryRestoreIcon);
         return false;
     }
     private void EndClickVisibility()

@@ -1,4 +1,5 @@
 using System;
+using static TrayText;
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -177,7 +178,7 @@ public sealed partial class MainWindow
         ShowGroupDropLine(!drag.Released && target>0 && slot!=drag.Source.Index,viewport,gapTop);
         if(!drag.Released)
         {
-            string status=target<=0 ? "松开以取消" : target==drag.Source.Index ? "松开以保留当前位置" : "松开以移动分组";
+            string status=target<=0 ? TextFor(TextKey.ReleaseToCancel) : target==drag.Source.Index ? TextFor(TextKey.ReleaseToKeep) : TextFor(TextKey.ReleaseToMoveGroup);
             if(Status.Text!=status) Status.Text=status;
         }
         if(progress>=1) FinishGroupDrag();

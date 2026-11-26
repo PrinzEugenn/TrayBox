@@ -1,4 +1,5 @@
 using System;
+using static TrayText;
 using System.IO;
 using Microsoft.UI.Xaml;
 
@@ -9,7 +10,8 @@ public sealed partial class MainWindow
     private sealed class UndoEntry
     {
         internal TrayItem Item;
-        internal string Key, Message;
+        internal string Key;
+        internal TextKey Message;
         internal BoxPosition Position;
         internal bool WasBoxed, ChangedVisibility;
         internal string GroupId, GroupLabel;
@@ -33,14 +35,14 @@ public sealed partial class MainWindow
             if(!layout.MoveGroupTo(id,destination)) return false;
             lastChange=new UndoEntry
             {
-                GroupId=id,GroupLabel=name,OriginalGroupIndex=original,Message="已移动分组"
+                GroupId=id,GroupLabel=name,OriginalGroupIndex=original,Message=TextKey.GroupMoved
             };
             undoCompleted=false;
             return true;
         }
         catch(Exception error) when(error is IOException || error is UnauthorizedAccessException)
         {
-            Status.Text="未能保存分组顺序，请检查配置目录";
+            Status.Text=TextFor(TextKey.PersistGroupOrderFailed);
             return false;
         }
     }
@@ -63,7 +65,7 @@ public sealed partial class MainWindow
             try { layout.Move(key,group,beforeKey); }
             catch(Exception error) when(error is IOException || error is UnauthorizedAccessException)
             {
-                layoutError="未能保存图标位置，请检查配置目录";
+                layoutError=TextFor(TextKey.PersistPositionFailed);
             }
         }
         var current=layout.PositionOf(key);
@@ -74,7 +76,7 @@ public sealed partial class MainWindow
             {
                 Item=item, Key=key, Position=original, WasBoxed=wasBoxed,
                 ChangedVisibility=visibilityChanged,
-                Message=visibilityChanged ? (boxed ? "已收纳" : "已移出") : "已移动"
+                Message=visibilityChanged ? (boxed ? TextKey.Collected : TextKey.Restored) : TextKey.Moved
             };
         }
         RenderAfterIconChange();
@@ -91,12 +93,12 @@ public sealed partial class MainWindow
     private void UpdateUndo(string status)
     {
         UndoButton.Visibility=lastChange==null ? Visibility.Collapsed : Visibility.Visible;
-        Status.Text=undoCompleted && !engine.SelectionPersistencePending ? "已撤销" : status;
+        Status.Text=undoCompleted && !engine.SelectionPersistencePending ? TextFor(TextKey.Undone) : status;
         if(lastChange!=null && !engine.SelectionPersistencePending)
         {
             var name=lastChange.GroupLabel ?? lastChange.Item?.Tip;
-            var label=String.IsNullOrWhiteSpace(name) ? "图标" : name.Replace('\n',' ').Replace('\r',' ');
-            Status.Text=lastChange.Message+" · "+label;
+            var label=String.IsNullOrWhiteSpace(name) ? TextFor(TextKey.Icon) : name.Replace('\n',' ').Replace('\r',' ');
+            Status.Text=TextFor(lastChange.Message)+" · "+label;
         }
     }
 
@@ -110,7 +112,7 @@ public sealed partial class MainWindow
             {
                 lastChange=null;
                 RenderAfterIconChange();
-                Status.Text="该应用的通知图标已退出或重新注册，无法撤销";
+                Status.Text=TextFor(TextKey.UndoIconChanged);
                 return;
             }
             if(change.Item.Boxed!=change.WasBoxed && !engine.SetBoxed(change.Item,change.WasBoxed))
@@ -126,18 +128,18 @@ public sealed partial class MainWindow
             {
                 lastChange=null;
                 RenderAfterIconChange();
-                Status.Text="分组已变化，无法恢复之前的顺序";
+                Status.Text=TextFor(TextKey.UndoGroupChanged);
                 return;
             }
         }
         catch(Exception error) when(error is IOException || error is UnauthorizedAccessException)
         {
-            Status.Text="未能恢复图标位置，可再次点击撤销重试";
+            Status.Text=TextFor(TextKey.UndoPositionFailed);
             return;
         }
         lastChange=null;
         undoCompleted=true;
         RenderAfterIconChange();
-        Status.Text=engine.SelectionPersistencePending ? "已撤销，TrayBox 正在重试保存收纳记录" : "已撤销";
+        Status.Text=engine.SelectionPersistencePending ? TextFor(TextKey.UndoSavePending) : TextFor(TextKey.Undone);
     }
 }

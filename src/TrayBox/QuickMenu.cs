@@ -1,4 +1,5 @@
 using System;
+using static TrayText;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -23,11 +24,11 @@ internal sealed class QuickMenu : Window
         Title="TrayBox";
         if(acrylic) SystemBackdrop=new DesktopAcrylicBackdrop();
         var list=new StackPanel { Spacing=1, Padding=new Thickness(4), RequestedTheme=theme };
-        Add(list,"\uE80F","打开 TrayBox",open);
-        Add(list,"\uE713","设置",settings);
-        Add(list,"\uE72C","刷新可用图标",refresh);
+        Add(list,"\uE80F",TextFor(TextKey.OpenTrayBox),open);
+        Add(list,"\uE713",TextFor(TextKey.Settings),settings);
+        Add(list,"\uE72C",TextFor(TextKey.RefreshTrayIcons),refresh);
         list.Children.Add(new Border {Height=1,Margin=new Thickness(8,3,8,3),Style=(Style)Application.Current.Resources["TrayBoxDividerStyle"]});
-        Add(list,"\uE711","退出并恢复图标",quit);
+        Add(list,"\uE711",TextFor(TextKey.ExitAndRestore),quit);
         var scroll=new ScrollViewer { Content=list,HorizontalScrollMode=ScrollMode.Disabled,VerticalScrollBarVisibility=ScrollBarVisibility.Auto };
         var surface=new Border {RequestedTheme=theme,Child=scroll};
         if(!acrylic) surface.Background=new SolidColorBrush(theme==ElementTheme.Dark ? Windows.UI.Color.FromArgb(255,38,38,38) : Windows.UI.Color.FromArgb(255,248,248,248));

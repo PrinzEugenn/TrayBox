@@ -1,4 +1,5 @@
 using System;
+using static TrayText;
 using System.IO;
 using Microsoft.UI.Xaml;
 namespace TrayBoxFluent;
@@ -19,7 +20,7 @@ public partial class App : Application
         try { host = new TrayHost(this, command); }
         catch (Exception error)
         {
-                System.Windows.Forms.MessageBox.Show("TrayBox 无法启动：" + error.Message, "TrayBox", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                System.Windows.Forms.MessageBox.Show(TextFor(TextKey.StartupFailed) + Environment.NewLine + error.Message, "TrayBox", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
             Exit();
         }
     }
