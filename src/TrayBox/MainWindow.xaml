@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window x:Class="TrayBoxFluent.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="TrayBox">
+    <Window.SystemBackdrop><DesktopAcrylicBackdrop /></Window.SystemBackdrop>
+    <Grid x:Name="WindowSurface">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid x:Name="CaptionRegion" Height="32" Background="Transparent" Visibility="Collapsed">
+            <Grid.ColumnDefinitions><ColumnDefinition x:Name="CaptionInset" Width="0"/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <StackPanel x:Name="CaptionIdentity" Grid.Column="1" Orientation="Horizontal"
+                        HorizontalAlignment="Left" VerticalAlignment="Center" Margin="16,0,0,0" Spacing="8">
+                <Image x:Name="CaptionIcon" Width="16" Height="16"/>
+                <TextBlock Text="TrayBox" Style="{ThemeResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    <Grid Grid.Row="1" x:Name="Root" Padding="20,14,20,16" RowSpacing="16">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid x:Name="PageHeading" ColumnSpacing="12">
+            <Grid.RenderTransform><TranslateTransform x:Name="HeadingOffset"/></Grid.RenderTransform>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <Button x:Name="BackButton" Visibility="Collapsed" VerticalAlignment="Center" Click="BackClicked" ToolTipService.ToolTip="返回" AutomationProperties.Name="返回"><SymbolIcon Symbol="Back"/></Button>
+            <StackPanel Grid.Column="1" Spacing="3"><TextBlock x:Name="PageTitle" Text="图标收纳" Style="{ThemeResource SubtitleTextBlockStyle}"/><TextBlock x:Name="PageSubtitle" Text="让通知区域更整洁" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/></StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button x:Name="OrganizeButton" Content="整理" Click="OrganizeClicked" AutomationProperties.Name="整理图标" ToolTipService.ToolTip="调整顺序与分组"/>
+                <Button x:Name="ManageButton" Click="ManageClicked" AutomationProperties.Name="设置" ToolTipService.ToolTip="设置" Width="36" Height="32" Padding="0"><FontIcon Glyph="&#xE713;" FontSize="16"/></Button>
+            </StackPanel>
+        </Grid>
+        <Border x:Name="PageBody" Grid.Row="1">
+            <Grid RowSpacing="8">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <Border x:Name="DropHighlight" Grid.RowSpan="2" BorderThickness="2" CornerRadius="6" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" IsHitTestVisible="False" Visibility="Collapsed"/>
+                <Grid x:Name="SectionHeader" ColumnSpacing="8">
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock x:Name="CountText" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                    <Button x:Name="NewGroupButton" Grid.Column="1" Content="+ 新建分组" Click="NewGroupClicked" Visibility="Collapsed"/>
+                </Grid>
+                <ScrollViewer x:Name="ContentScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid>
+                        <ItemsControl x:Name="Tiles" HorizontalContentAlignment="Stretch"/>
+                        <StackPanel x:Name="EmptyState" IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                            <SymbolIcon Symbol="Folder" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Text="收纳盒还是空的" Style="{ThemeResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="拖入图标，或在设置中添加" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel x:Name="ListItems" Visibility="Collapsed" Spacing="4"/>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+        <Grid Grid.Row="2" ColumnSpacing="8" MinHeight="32">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock x:Name="Status" VerticalAlignment="Center" Style="{ThemeResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                       AutomationProperties.LiveSetting="Polite"/>
+            <Button x:Name="UndoButton" Grid.Column="1" Visibility="Collapsed" Click="UndoClicked"
+                    AutomationProperties.Name="撤销" Style="{StaticResource SubtleButtonStyle}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE7A7;" FontSize="14"/>
+                    <TextBlock Text="撤销"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+        <Canvas x:Name="DropMarkers" Grid.RowSpan="3" IsHitTestVisible="False">
+            <Border x:Name="InsertionMarker" Width="4" Height="72" CornerRadius="2"
+                    Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="Collapsed"/>
+            <Border x:Name="GroupInsertionMarker" Height="3" CornerRadius="1.5"
+                    Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="Collapsed"/>
+        </Canvas>
+        <Canvas x:Name="GroupDragLayer" Grid.RowSpan="3" IsHitTestVisible="False"/>
+    </Grid>
+    </Grid>
+</Window>
